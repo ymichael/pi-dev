@@ -6,6 +6,8 @@
     "pi-package"
   ],
   "scripts": {
+    "dev": "PI_CODING_AGENT_DIR=.pi-dev pi",
+    "setup": "bash setup.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit"
