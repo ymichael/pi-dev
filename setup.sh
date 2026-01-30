@@ -56,8 +56,8 @@ for item in settings.json models.json AGENTS.md APPEND_SYSTEM.md; do
   fi
 done
 
-# Carry over auth, sessions, keybindings from global install
-for item in auth sessions keybindings.json; do
+# Carry over auth, sessions, keybindings, and downloaded binaries from global install
+for item in auth sessions keybindings.json bin; do
   if [[ -e "$PI_GLOBAL/$item" ]]; then
     link "$PI_GLOBAL/$item" "$PI_DEV/$item"
   fi
