@@ -23,17 +23,16 @@ Personal [pi coding agent](https://github.com/badlogic/pi-mono) configuration pa
 
 ### Prompt Templates
 
-| Prompt             | Description                                             |
-| ------------------ | ------------------------------------------------------- |
-| `/explore <query>` | Fast codebase exploration using the explore agent       |
-| `/review [focus]`  | Review code changes for bugs, security, and correctness |
+| Prompt            | Description                                             |
+| ----------------- | ------------------------------------------------------- |
+| `/review [focus]` | Review code changes for bugs, security, and correctness |
 
 ### Config (optional)
 
 Reference configuration files in `config/` that can be synced to `~/.pi/agent/`:
 
 - `settings.json` — default provider, model, thinking level
-- `models.json` — custom model definitions
+- `APPEND_SYSTEM.md` — appended to the system prompt
 
 ## Quick Start
 
@@ -55,7 +54,7 @@ pi             # run pi from this directory — everything just works
   prompts → prompts/
   agents → agents/
   settings.json → config/settings.json
-  models.json → config/models.json
+  APPEND_SYSTEM.md → config/APPEND_SYSTEM.md
 ```
 
 Edit any resource file and `/reload` in pi to pick up changes instantly — no reinstall needed.
@@ -75,16 +74,10 @@ pi install git:github.com/<user>/dev
 ## Usage Examples
 
 ```
-# Explore the codebase (uses fast Haiku agent)
-/explore how are API routes structured
+# Review code changes
+/review security
 
-# Scout + plan without implementing
-/scout-and-plan add Redis caching to session store
-
-# Full implementation workflow
-/implement add input validation to API endpoints
-
-# Direct subagent use
+# Direct subagent use — explore is great for codebase navigation
 Use the explore agent to find all TypeScript files related to authentication
 
 # Parallel exploration
@@ -120,16 +113,13 @@ dev/
 │   ├── explore.md            # Read-only codebase explorer (Claude Code style)
 │   ├── reviewer.md           # Code reviewer on gpt-5.2-codex
 │   └── worker.md             # General-purpose
-├── skills/
-│   ├── repo-research/SKILL.md
-│   └── update-agents-md/SKILL.md
+├── skills/                   # Custom skills (add SKILL.md folders)
 ├── prompts/                  # Prompt templates
-│   ├── explore.md
 │   └── review.md
 ├── themes/                   # Custom themes (add .json files)
 └── config/                   # Reference configs for ~/.pi/agent/
     ├── settings.json
-    └── models.json
+    └── APPEND_SYSTEM.md
 ```
 
 ## Customizing Agents
