@@ -12,7 +12,10 @@
   },
   "pi": {
     "extensions": [
-      "./extensions"
+      "./extensions/handoff.ts",
+      "./extensions/web-fetch.ts",
+      "./extensions/web-search.ts",
+      "./extensions/subagent/index.ts"
     ],
     "skills": [
       "./skills"
