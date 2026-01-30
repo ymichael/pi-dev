@@ -43,23 +43,41 @@ export default function (pi: ExtensionAPI) {
         url.searchParams.set("q", params.query);
         url.searchParams.set("count", String(Math.min(params.count || 10, 20)));
 
-        const response = await fetch(url, {
-          headers: {
-            Accept: "application/json",
-            "Accept-Encoding": "gzip",
-            "X-Subscription-Token": apiKey,
-          },
-          signal,
-        });
+        const maxRetries = 5;
+        let data: { web?: { results?: { title: string; url: string; description: string }[] } } | undefined;
 
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(`API error ${response.status}: ${text}`);
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          if (attempt > 0) {
+            const jitter = Math.random() * 1000;
+            await new Promise((resolve) => setTimeout(resolve, 500 + jitter));
+          }
+
+          const response = await fetch(url, {
+            headers: {
+              Accept: "application/json",
+              "Accept-Encoding": "gzip",
+              "X-Subscription-Token": apiKey,
+            },
+            signal,
+          });
+
+          if (response.status === 429) {
+            if (attempt === maxRetries) {
+              throw new Error(`Rate limited (429) after ${maxRetries + 1} attempts`);
+            }
+            continue;
+          }
+
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`API error ${response.status}: ${text}`);
+          }
+
+          data = await response.json();
+          break;
         }
 
-        const data = await response.json();
-
-        const results = (data.web?.results || []).map((r: { title: string; url: string; description: string }) => ({
+        const results = (data?.web?.results || []).map((r: { title: string; url: string; description: string }) => ({
           title: r.title,
           url: r.url,
           description: r.description,
