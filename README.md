@@ -19,7 +19,7 @@ Personal [pi coding agent](https://github.com/badlogic/pi-mono) configuration pa
 | ------------ | ------------- | ---------------------------------------------------------------------------------------------------- |
 | **explore**  | Haiku         | Fast read-only codebase explorer (Claude Code style). Finds files, searches code, answers questions. |
 | **reviewer** | gpt-5.2-codex | Code reviewer with prioritized findings (inspired by Codex `/review`)                                |
-| **worker**   | Sonnet        | General-purpose agent with full capabilities                                                         |
+| **worker**   | (inherited)   | General-purpose agent with full capabilities, uses the spawning model                                |
 
 ### Prompt Templates
 
