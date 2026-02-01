@@ -49,11 +49,7 @@ Edit any resource file and `/reload` in pi to pick up changes instantly — no r
 For use in other projects (no symlinks, pi copies/registers the package):
 
 ```bash
-# From local path
-pi install ~/Projects/dev
-
-# From git (on a new machine)
-pi install git:github.com/<user>/dev
+pi install git:github.com/ymichael/pi-dev
 ```
 
 ## Environment Variables
