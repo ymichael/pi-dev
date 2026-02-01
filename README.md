@@ -8,7 +8,7 @@ Personal [pi](https://github.com/badlogic/pi-mono) package.
 | -------------- | ------------------------------------------------------------------ |
 | **web_search** | Search the web via Brave Search API. Requires `BRAVE_API_KEY`      |
 | **web_fetch**  | Fetch any URL as clean markdown via Jina Reader                    |
-| **handoff**    | Transfer context to a new focused session via `/handoff <goal>`    |
+| **spawn-agent** | Spawn a new agent via tmux with current session context via `/spawn-agent <goal>` |
 | **subagent**   | Delegate tasks to specialized agents with isolated context windows |
 
 ### Agents (for subagent)

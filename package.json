@@ -14,7 +14,7 @@
   },
   "pi": {
     "extensions": [
-      "./extensions/handoff.ts",
+      "./extensions/spawn-agent.ts",
       "./extensions/web-fetch.ts",
       "./extensions/web-search.ts",
       "./extensions/subagent/index.ts"
