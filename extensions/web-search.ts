@@ -26,9 +26,9 @@ export default function (pi: ExtensionAPI) {
     async execute(
       _toolCallId: string,
       params: { query: string; count?: number },
-      _onUpdate: unknown,
-      _ctx: unknown,
       signal?: AbortSignal,
+      _onUpdate?: unknown,
+      _ctx?: unknown,
     ) {
       const apiKey = process.env.BRAVE_API_KEY;
       if (!apiKey) {

@@ -27,9 +27,9 @@ export default function (pi: ExtensionAPI) {
     async execute(
       _toolCallId: string,
       params: { url: string },
-      _onUpdate: unknown,
-      _ctx: unknown,
       signal?: AbortSignal,
+      _onUpdate?: unknown,
+      _ctx?: unknown,
     ) {
       try {
         const headers: Record<string, string> = {
