@@ -1,15 +1,15 @@
 /**
- * Subagent Tool - Delegate tasks to specialized agents
+ * Task Tool - Launch specialized agents to handle tasks autonomously
  *
- * Spawns a separate `pi` process for each subagent invocation,
+ * Spawns a separate `pi` process for each agent invocation,
  * giving it an isolated context window.
  *
  * Supports three modes:
- *   - Single: { agent: "name", task: "..." }
- *   - Parallel: { tasks: [{ agent: "name", task: "..." }, ...] }
- *   - Chain: { chain: [{ agent: "name", task: "... {previous} ..." }, ...] }
+ *   - Single: { subagent_type: "name", prompt: "..." }
+ *   - Parallel: { tasks: [{ subagent_type: "name", prompt: "..." }, ...] }
+ *   - Chain: { chain: [{ subagent_type: "name", prompt: "..." }, ...] }
  *
- * Uses JSON mode to capture structured output from subagents.
+ * Uses JSON mode to capture structured output from agents.
  */
 
 import { spawn } from "node:child_process";
@@ -151,7 +151,7 @@ interface SingleResult {
   step?: number;
 }
 
-interface SubagentDetails {
+interface TaskDetails {
   mode: "single" | "parallel" | "chain";
   agentScope: AgentScope;
   projectAgentsDir: string | null;
@@ -211,14 +211,14 @@ async function mapWithConcurrencyLimit<TIn, TOut>(
 }
 
 function writePromptToTempFile(agentName: string, prompt: string): { dir: string; filePath: string } {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagent-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-task-"));
   const safeName = agentName.replace(/[^\w.-]+/g, "_");
   const filePath = path.join(tmpDir, `prompt-${safeName}.md`);
   fs.writeFileSync(filePath, prompt, { encoding: "utf-8", mode: 0o600 });
   return { dir: tmpDir, filePath };
 }
 
-type OnUpdateCallback = (partial: AgentToolResult<SubagentDetails>) => void;
+type OnUpdateCallback = (partial: AgentToolResult<TaskDetails>) => void;
 
 async function runSingleAgent(
   defaultCwd: string,
@@ -229,7 +229,7 @@ async function runSingleAgent(
   step: number | undefined,
   signal: AbortSignal | undefined,
   onUpdate: OnUpdateCallback | undefined,
-  makeDetails: (results: SingleResult[]) => SubagentDetails,
+  makeDetails: (results: SingleResult[]) => TaskDetails,
 ): Promise<SingleResult> {
   const agent = agents.find((a) => a.name === agentName);
 
@@ -386,7 +386,7 @@ async function runSingleAgent(
     });
 
     currentResult.exitCode = exitCode;
-    if (wasAborted) throw new Error("Subagent was aborted");
+    if (wasAborted) throw new Error("Task was aborted");
     return currentResult;
   } finally {
     if (tmpPromptPath)
@@ -405,15 +405,15 @@ async function runSingleAgent(
 }
 
 const TaskItem = Type.Object({
-  agent: Type.String({ description: "Name of the agent to invoke" }),
-  task: Type.String({ description: "Task to delegate to the agent" }),
+  subagent_type: Type.String({ description: "The type of specialized agent to use for this task" }),
+  prompt: Type.String({ description: "The task for the agent to perform" }),
   cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
 });
 
 const ChainItem = Type.Object({
-  agent: Type.String({ description: "Name of the agent to invoke" }),
-  task: Type.String({
-    description: "Task with optional {previous} placeholder for prior output",
+  subagent_type: Type.String({ description: "The type of specialized agent to use for this task" }),
+  prompt: Type.String({
+    description: "The task with optional {previous} placeholder for prior output",
   }),
   cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
 });
@@ -423,21 +423,21 @@ const AgentScopeSchema = StringEnum(["user", "project", "both"] as const, {
   default: "user",
 });
 
-const SubagentParams = Type.Object({
-  agent: Type.Optional(
+const TaskParams = Type.Object({
+  subagent_type: Type.Optional(
     Type.String({
-      description: "Name of the agent to invoke (for single mode)",
+      description: "The type of specialized agent to use for this task",
     }),
   ),
-  task: Type.Optional(Type.String({ description: "Task to delegate (for single mode)" })),
+  prompt: Type.Optional(Type.String({ description: "The task for the agent to perform" })),
   tasks: Type.Optional(
     Type.Array(TaskItem, {
-      description: "Array of {agent, task} for parallel execution",
+      description: "Array of {subagent_type, prompt} for parallel execution",
     }),
   ),
   chain: Type.Optional(
     Type.Array(ChainItem, {
-      description: "Array of {agent, task} for sequential execution",
+      description: "Array of {subagent_type, prompt} for sequential execution",
     }),
   ),
   agentScope: Type.Optional(AgentScopeSchema),
@@ -450,17 +450,19 @@ const SubagentParams = Type.Object({
 
 export default function (pi: ExtensionAPI) {
   pi.registerTool({
-    name: "subagent",
-    label: "Subagent",
+    name: "task",
+    label: "Task",
     description: [
-      "Delegate tasks to specialized subagents with isolated context.",
-      "PREFER using the 'explore' agent for codebase navigation, file discovery, and understanding project structure instead of using ls/find/grep directly.",
-      "The explore agent is fast, has its own context window, and can do thorough multi-step searches without cluttering your context.",
-      "Modes: single (agent + task), parallel (tasks array), chain (sequential with {previous} placeholder).",
+      "Launch a specialized agent to handle a task autonomously with an isolated context window.",
+      "When doing file search, prefer to use the Task tool in order to reduce context usage.",
+      "You should proactively use the Task tool with specialized agents when the task at hand matches the agent's description.",
+      "PREFER using subagent_type='explore' for codebase navigation, file discovery, and understanding project structure instead of using ls/find/grep directly.",
+      "When NOT to use: reading a specific file path (use read), searching for a specific class definition (use grep), searching within 2-3 known files (use read).",
+      "Modes: single (subagent_type + prompt), parallel (tasks array), chain (sequential with {previous} placeholder).",
       'Default agent scope is "user" (from ~/.pi/agent/agents).',
       'To enable project-local agents in .pi/agents, set agentScope: "both" (or "project").',
     ].join(" "),
-    parameters: SubagentParams,
+    parameters: TaskParams,
 
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
       const agentScope: AgentScope = params.agentScope ?? "user";
@@ -468,12 +470,12 @@ export default function (pi: ExtensionAPI) {
       const agents = discovery.agents;
       const hasChain = (params.chain?.length ?? 0) > 0;
       const hasTasks = (params.tasks?.length ?? 0) > 0;
-      const hasSingle = Boolean(params.agent && params.task);
+      const hasSingle = Boolean(params.subagent_type && params.prompt);
       const modeCount = Number(hasChain) + Number(hasTasks) + Number(hasSingle);
 
       const makeDetails =
         (mode: "single" | "parallel" | "chain") =>
-        (results: SingleResult[]): SubagentDetails => ({
+        (results: SingleResult[]): TaskDetails => ({
           mode,
           agentScope,
           projectAgentsDir: discovery.projectAgentsDir,
@@ -499,7 +501,7 @@ export default function (pi: ExtensionAPI) {
 
         for (let i = 0; i < params.chain.length; i++) {
           const step = params.chain[i];
-          const taskWithContext = step.task.replace(/\{previous\}/g, previousOutput);
+          const taskWithContext = step.prompt.replace(/\{previous\}/g, previousOutput);
 
           // Create update callback that includes all previous results
           const chainUpdate: OnUpdateCallback | undefined = onUpdate
@@ -519,7 +521,7 @@ export default function (pi: ExtensionAPI) {
           const result = await runSingleAgent(
             ctx.cwd,
             agents,
-            step.agent,
+            step.subagent_type,
             taskWithContext,
             step.cwd,
             i + 1,
@@ -536,7 +538,7 @@ export default function (pi: ExtensionAPI) {
               content: [
                 {
                   type: "text",
-                  text: `Chain stopped at step ${i + 1} (${step.agent}): ${errorMsg}`,
+                  text: `Chain stopped at step ${i + 1} (${step.subagent_type}): ${errorMsg}`,
                 },
               ],
               details: makeDetails("chain")(results),
@@ -574,9 +576,9 @@ export default function (pi: ExtensionAPI) {
         // Initialize placeholder results
         for (let i = 0; i < params.tasks.length; i++) {
           allResults[i] = {
-            agent: params.tasks[i].agent,
+            agent: params.tasks[i].subagent_type,
             agentSource: "unknown",
-            task: params.tasks[i].task,
+            task: params.tasks[i].prompt,
             exitCode: -1, // -1 = still running
             messages: [],
             stderr: "",
@@ -612,8 +614,8 @@ export default function (pi: ExtensionAPI) {
           const result = await runSingleAgent(
             ctx.cwd,
             agents,
-            t.agent,
-            t.task,
+            t.subagent_type,
+            t.prompt,
             t.cwd,
             undefined,
             signal,
@@ -648,12 +650,12 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
-      if (params.agent && params.task) {
+      if (params.subagent_type && params.prompt) {
         const result = await runSingleAgent(
           ctx.cwd,
           agents,
-          params.agent,
-          params.task,
+          params.subagent_type,
+          params.prompt,
           params.cwd,
           undefined,
           signal,
@@ -701,19 +703,19 @@ export default function (pi: ExtensionAPI) {
       const scope: AgentScope = args.agentScope ?? "user";
       if (args.chain && args.chain.length > 0) {
         let text =
-          theme.fg("toolTitle", theme.bold("subagent ")) +
+          theme.fg("toolTitle", theme.bold("task ")) +
           theme.fg("accent", `chain (${args.chain.length} steps)`) +
           theme.fg("muted", ` [${scope}]`);
         for (let i = 0; i < Math.min(args.chain.length, 3); i++) {
           const step = args.chain[i];
           // Clean up {previous} placeholder for display
-          const cleanTask = step.task.replace(/\{previous\}/g, "").trim();
+          const cleanTask = step.prompt.replace(/\{previous\}/g, "").trim();
           const preview = cleanTask.length > 40 ? `${cleanTask.slice(0, 40)}...` : cleanTask;
           text +=
             "\n  " +
             theme.fg("muted", `${i + 1}.`) +
             " " +
-            theme.fg("accent", step.agent) +
+            theme.fg("accent", step.subagent_type) +
             theme.fg("dim", ` ${preview}`);
         }
         if (args.chain.length > 3) text += `\n  ${theme.fg("muted", `... +${args.chain.length - 3} more`)}`;
@@ -721,20 +723,20 @@ export default function (pi: ExtensionAPI) {
       }
       if (args.tasks && args.tasks.length > 0) {
         let text =
-          theme.fg("toolTitle", theme.bold("subagent ")) +
+          theme.fg("toolTitle", theme.bold("task ")) +
           theme.fg("accent", `parallel (${args.tasks.length} tasks)`) +
           theme.fg("muted", ` [${scope}]`);
         for (const t of args.tasks.slice(0, 3)) {
-          const preview = t.task.length > 40 ? `${t.task.slice(0, 40)}...` : t.task;
-          text += `\n  ${theme.fg("accent", t.agent)}${theme.fg("dim", ` ${preview}`)}`;
+          const preview = t.prompt.length > 40 ? `${t.prompt.slice(0, 40)}...` : t.prompt;
+          text += `\n  ${theme.fg("accent", t.subagent_type)}${theme.fg("dim", ` ${preview}`)}`;
         }
         if (args.tasks.length > 3) text += `\n  ${theme.fg("muted", `... +${args.tasks.length - 3} more`)}`;
         return new Text(text, 0, 0);
       }
-      const agentName = args.agent || "...";
-      const preview = args.task ? (args.task.length > 60 ? `${args.task.slice(0, 60)}...` : args.task) : "...";
+      const agentName = args.subagent_type || "...";
+      const preview = args.prompt ? (args.prompt.length > 60 ? `${args.prompt.slice(0, 60)}...` : args.prompt) : "...";
       let text =
-        theme.fg("toolTitle", theme.bold("subagent ")) +
+        theme.fg("toolTitle", theme.bold("task ")) +
         theme.fg("accent", agentName) +
         theme.fg("muted", ` [${scope}]`);
       text += `\n  ${theme.fg("dim", preview)}`;
@@ -742,7 +744,7 @@ export default function (pi: ExtensionAPI) {
     },
 
     renderResult(result, { expanded }, theme) {
-      const details = result.details as SubagentDetails | undefined;
+      const details = result.details as TaskDetails | undefined;
       if (!details || details.results.length === 0) {
         const text = result.content[0];
         return new Text(text?.type === "text" ? text.text : "(no output)", 0, 0);

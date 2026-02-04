@@ -9,15 +9,14 @@ Personal [pi](https://github.com/badlogic/pi-mono) package.
 | **web_search** | Search the web via Brave Search API. Requires `BRAVE_API_KEY`      |
 | **web_fetch**  | Fetch any URL as clean markdown via Jina Reader                    |
 | **spawn-agent** | Spawn a new agent via tmux with current session context via `/spawn-agent <goal>` |
-| **subagent**   | Delegate tasks to specialized agents with isolated context windows |
+| **task**       | Launch specialized agents to handle tasks autonomously with isolated context |
 
-### Agents (for subagent)
+### Agents (for task tool)
 
-| Agent        | Model         | Description                                                                                          |
-| ------------ | ------------- | ---------------------------------------------------------------------------------------------------- |
-| **explore**  | Haiku         | Fast read-only codebase explorer (Claude Code style). Finds files, searches code, answers questions. |
-| **reviewer** | gpt-5.2-codex | Code reviewer with prioritized findings (inspired by Codex `/review`)                                |
-| **worker**   | (inherited)   | General-purpose agent with full capabilities, uses the spawning model                                |
+| Agent       | Model       | Description                                                                                          |
+| ----------- | ----------- | ---------------------------------------------------------------------------------------------------- |
+| **explore** | Haiku       | Fast read-only codebase explorer. Finds files, searches code, answers questions.                     |
+| **worker**  | (inherited) | General-purpose agent with full capabilities, uses the spawning model                                |
 
 ## Quick Start
 

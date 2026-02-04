@@ -106,7 +106,7 @@ function findNearestProjectAgentsDir(cwd: string): string | null {
 
 /**
  * Find the bundled agents directory relative to this file.
- * Layout: extensions/subagent/agents.ts → ../../agents/
+ * Layout: extensions/task/agents.ts → ../../agents/
  */
 function getBundledAgentsDir(): string {
   const thisDir = path.dirname(new URL(import.meta.url).pathname);

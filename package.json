@@ -17,7 +17,7 @@
       "./extensions/spawn-agent.ts",
       "./extensions/web-fetch.ts",
       "./extensions/web-search.ts",
-      "./extensions/subagent/index.ts"
+      "./extensions/task/index.ts"
     ],
     "skills": [
       "./skills"
